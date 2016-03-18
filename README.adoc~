@@ -1,6 +1,7 @@
 :toc: left
 :toc-title: Processamento Digital de Imagens
-:toclevels: 5
+:toclevels: 4
+
 = Processamento Digital de Imagens
 
 == Alunos
@@ -10,12 +11,14 @@ Flávio Mata Davim <flaviodavim@gmail.com>
 Jonathan Gabriel Lima da Costa <jonathangabriel@bct.ect.ufrn.br>
 
 :sectlinks: true
+:sectnums: off
 :source-highlighter: coderay
 :coderay-linenums-mode: inline
 
-== Lista de Exercícios 1
+== Exercícios
 
-:sectnums: = true
+:sectnums: off
+
 Referente à Primeira Unidade da disciplina de Processamento Digital de Imagens.
 	
 === Questão 3.1
