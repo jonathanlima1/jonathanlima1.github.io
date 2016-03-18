@@ -517,40 +517,33 @@ int main(int, char**){
 <div class="content">
 <pre class="highlight"><code class="language-c++" data-lang="c++">#include &lt;iostream&gt;
 #include &lt;cv.h&gt;
-#include &lt;opencv2/opencv.hpp&gt;
 #include &lt;highgui.h&gt;
 
-using namespace cv;
-using namespace std;
+	using namespace cv;
+	using namespace std;
 
-int main(int, char**){
-  Mat image;
-  Vec3b val;
+int main(int argc, char** argv){
 
-  image= imread("bolhas.png",CV_LOAD_IMAGE_GRAYSCALE);
-  if(!image.data)
-    cout &lt;&lt; "nao abriu bolhas.png" &lt;&lt; endl;
+	Mat image;
 
-  namedWindow("janela",WINDOW_AUTOSIZE);
+	image = imread(argv[1], CV_LOAD_IMAGE_GRAYSCALE);
+	if(!image.data)
+		cout &lt;&lt; "Não foi possível carregar a imagem" &lt;&lt; endl;
 
-  for(int i=200;i&lt;210;i++){
-    for(int j=10;j&lt;200;j++){
-      image.at&lt;uchar&gt;(i,j)=0;
-    }
-  }
+	namedWindow("janela",WINDOW_AUTOSIZE);
 
-  imshow("janela", image);
-  waitKey();
+	int aux_1, aux_2;
 
-  image= imread("bolhas.png",CV_LOAD_IMAGE_COLOR);
+	 for(int i=0;i&lt;(image.cols)/2;i++){
+	     for(int j=0;j&lt;(image.rows)/2;j++){
+	     	aux_1 = image.at&lt;uchar&gt;((i+(image.cols/2)),(j+(image.rows/2)));
+	     	aux_2 = image.at&lt;uchar&gt;((i+(image.cols/2)),j);
 
-  val[0] = 0;   //B
-  val[1] = 0;   //G
-  val[2] = 255; //R
+	     	image.at&lt;uchar&gt;((i+(image.cols/2)),(j+(image.rows/2))) = image.at&lt;uchar&gt;(i,j);
+	     	image.at&lt;uchar&gt;((i+(image.cols/2)),j) = image.at&lt;uchar&gt;(i,(j+(image.rows/2)));
 
-  for(int i=200;i&lt;210;i++){
-    for(int j=10;j&lt;200;j++){
-      image.at&lt;Vec3b&gt;(i,j)=val;
+	     	image.at&lt;uchar&gt;(i,j) = aux_1;
+	     	image.at&lt;uchar&gt;(i,(j+(image.rows/2))) = aux_2;
     }
   }
 
@@ -570,7 +563,8 @@ int main(int, char**){
 <div class="sect4">
 <h5 id="_resolução_3"><a class="link" href="#_resolução_3">Resolução</a></h5>
 <div class="paragraph">
-<p>Resposta.</p>
+<p>Esse problema ocorre porque quando é feita a rotulação, o programa muda o valor em tom de cinza da bolha para que ela não seja acessada novamente. Nesse programa específico, ele não muda a cor da bolha para um valor fixo, mas sim para a cor correspondente ao número de bolhas. Resumindo, a primeira bolha vai ter a cor correspondente ao tom de cinza de valor 1, a segunda bolha corresponde ao valor 2 e assim por diante. Quando chegar à 255ª imagem, a cor da bolha será branca, que é a cor atual da bolha e isso geraria um problema de rotulação.
+    Há duas maneiras de se resolver isso. A primeira é criar um “if”que iria testar o valor correspondente ao número de bolhas, se ele fosse 254 ou maior, a cor da bolha iria ser igual à 254. A outra maneira é fixar a nova cor que as bolhas vão ter desde o início, deixando ele fixo desde o começo da rotulação.</p>
 </div>
 </div>
 </div>
@@ -611,21 +605,321 @@ int main(int argc, char** argv){
   p.x=0;
   p.y=0;
 
-  // busca objetos com buracos presentes
   nobjects=0;
-  for(int i=0; i&lt;height; i++){
-    for(int j=0; j&lt;width; j++){
+
+int j= 0;
+
+    for(int i=0; i&lt;height; i++){
       if(image.at&lt;uchar&gt;(i,j) == 255){
-		// achou um objeto
-		nobjects++;
-		p.x=j;
-		p.y=i;
-		floodFill(image,p,nobjects);
-	  }
-	}
+          p.x= j;
+          p.y= i;
+
+          floodFill(image, p, 0);
+        }
+      if(image.at&lt;uchar&gt;(j,i) == 255){
+          p.x= i;
+          p.y= j;
+
+          floodFill(image, p, 0);
+      }
+    }
+
+j = height-1;
+
+    for(int i=0; i&lt;width; i++){
+      if(image.at&lt;uchar&gt;(i,j) == 255){
+          p.x= j;
+          p.y= i;
+
+          floodFill(image, p, 0);
+        }
+      if(image.at&lt;uchar&gt;(j,i) == 255){
+          p.x= i;
+          p.y= j;
+
+          floodFill(image, p, 0);
+      }
+    }
+
+    for(int i=0; i&lt;height; i++){
+      for(int j=0; j&lt;width; j++){
+        if(i==0 &amp;&amp; j==0){
+          p.x=j;
+          p.y=i;
+          floodFill(image,p,100);
+        }
+        else if(image.at&lt;uchar&gt;(i,j) == 255){
+          // achou um objeto
+          nobjects++;
+          p.x=j;
+          p.y=i;
+          floodFill(image,p,100);
+        }
+      }
+    }
+
+    nobjects = 0;
+    for(int i=0; i&lt;height; i++){
+      for(int j=0; j&lt;width; j++){
+        if(image.at&lt;uchar&gt;(i,j) == 0){
+          // achou um objeto
+          nobjects++;
+          p.x=j;
+          p.y=i;
+          floodFill(image,p,200);
+        }
+      }
+    }
+
+
+      imshow("image", image);
+      imwrite("labeling.png", image);
+      std::cout &lt;&lt; nobjects &lt;&lt; " bolhas com buraco" &lt;&lt; std::endl;
+      waitKey();
+  return 0;
+    }</code></pre>
+</div>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-c++" data-lang="c++">int j= 0;
+
+    for(int i=0; i&lt;height; i++){
+      if(image.at&lt;uchar&gt;(i,j) == 255){
+          p.x= j;
+          p.y= i;
+
+          floodFill(image, p, 0);
+        }
+      if(image.at&lt;uchar&gt;(j,i) == 255){
+          p.x= i;
+          p.y= j;
+
+          floodFill(image, p, 0);
+      }
+    }</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Quando definimos j=0 e alteramos o valor de i é pra percorrer a linha e a coluna 0. Como a imagem é quadrada é possível fazer isso dentro do mesmo for. O if vai verificar quando vai haver um pixel branco e isso vai indicar que tem um bolha tocando alguma das duas laterais e por isso o programa através do floodFill transforma a bolha em preto, indicando que ela não vai entrar no cálculo, como pede a questão.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-c++" data-lang="c++">j = height-1;
+
+    for(int i=0; i&lt;width; i++){
+      if(image.at&lt;uchar&gt;(i,j) == 255){
+          p.x= j;
+          p.y= i;
+
+          floodFill(image, p, 0);
+        }
+      if(image.at&lt;uchar&gt;(j,i) == 255){
+          p.x= i;
+          p.y= j;
+
+          floodFill(image, p, 0);
+      }
+    }</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Essa segunda parte vai fazer o cálculo na última linha e na última coluna aproveitando a mesma idéia da primeiro for e apenas mudando o valor de j para width - 1.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-c++" data-lang="c++">for(int i=0; i&lt;height; i++){
+      for(int j=0; j&lt;width; j++){
+        if(i==0 &amp;&amp; j==0){
+          p.x=j;
+          p.y=i;
+          floodFill(image,p,100);
+        }
+        else if(image.at&lt;uchar&gt;(i,j) == 255){
+          // achou um objeto
+          nobjects++;
+          p.x=j;
+          p.y=i;
+          floodFill(image,p,50);
+           }
+           else if(image.at&lt;uchar&gt;(i,j) == 0){
+          // achou um buraco
+          noholes++;
+          p.x=j;
+          p.y=i;
+          floodFill(image,p,200);
+        }
+      }
+    }</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>No último for, vamos criar um for para percorrer todos os pixels da imagem. Como tiramos todas as bolhas que estavam nas bordas, é possível afirmar que o primeiro elemento da imagem vai ter a cor de fundo da imagem, então em decorrência disso quando a posição (0,0) tiver seu valor verificado pelo floodFill, todo o background da imagem vai ser alterado pro tom de cinza de valor 100.
+     Após isso vão sobrar os valores 255 referentes as bolhas e os pretos que são as bolhas, já que essas não estavam ligadas ao background e por isso não foram alteradas pela ação do floodFill.
+    O nosso programa sempre que acha um valor 255 muda ele para o mesmo valor do plano de fundo pra que aquele buraco não seja mais contado e adicionamos um ao número geral de bolhas. Quando ele acha o valor 0, quer dizer que há uma bolha com buraco, então adicionamos um ao número de bolhas com buraco e mudamos o valor de 0 para 200.</p>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_questão_5"><a class="link" href="#_questão_5">1.1.5. Questão 5</a></h4>
+<div class="paragraph">
+<p>Utilizando o programa histogram.cpp como referência, implemente um programa equalize.cpp. Este deverá, para cada imagem capturada, realizar a equalização do histogram antes de exibir a imagem. Teste sua implementação apontando a câmera para ambientes com iluminações variadas e observando o efeito gerado.</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="equalize.png" alt="equalize">
+</div>
+</div>
+<div class="sect4">
+<h5 id="_resolução_5"><a class="link" href="#_resolução_5">Resolução</a></h5>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-c++" data-lang="c++">#include &lt;iostream&gt;
+#include &lt;opencv2/opencv.hpp&gt;
+
+using namespace cv;
+using namespace std;
+
+int main(int argc, char** argv){
+  Mat image;
+  int width, height;
+  VideoCapture cap;
+  vector&lt;Mat&gt; planes;
+  Mat histR, histG, histB;
+  int nbins = 64;
+  float range[] = {0, 256};
+  const float *histrange = { range };
+  bool uniform = true;
+  bool acummulate = false;
+
+  cap.open(0);
+
+  if(!cap.isOpened()){
+    cout &lt;&lt; "cameras indisponiveis";
+    return -1;
   }
-  imshow("image", image);
-  imwrite("labeling.png", image);
+
+  width  = cap.get(CV_CAP_PROP_FRAME_WIDTH);
+  height = cap.get(CV_CAP_PROP_FRAME_HEIGHT);
+
+  cout &lt;&lt; "largura = " &lt;&lt; width &lt;&lt; endl;
+  cout &lt;&lt; "altura  = " &lt;&lt; height &lt;&lt; endl;
+
+  int histw = nbins, histh = nbins/2;
+  Mat histImgR(histh, histw, CV_8UC3, Scalar(0,0,0));
+  Mat histImgG(histh, histw, CV_8UC3, Scalar(0,0,0));
+  Mat histImgB(histh, histw, CV_8UC3, Scalar(0,0,0));
+
+    vector&lt;Mat&gt; channels;
+    Mat img_hist_equalized;
+
+  while(1){
+    cap &gt;&gt; image;
+
+    cvtColor(image, img_hist_equalized, CV_BGR2YCrCb);
+    //change the color image from BGR to YCrCb format
+
+    split(img_hist_equalized,channels);
+    //split the image into channels
+
+    equalizeHist(channels[0], channels[0]);
+    //equalize histogram on the 1st channel (Y)
+
+    merge(channels,img_hist_equalized);
+    //merge 3 channels including the modified 1st channel into one image
+
+    cvtColor(img_hist_equalized, img_hist_equalized, CV_YCrCb2BGR);
+    //change the color image from YCrCb to BGR format (to display image properly)
+
+    split (img_hist_equalized, planes);
+    calcHist(&amp;planes[0], 1, 0, Mat(), histR, 1,
+             &amp;nbins, &amp;histrange,
+             uniform, acummulate);
+    calcHist(&amp;planes[1], 1, 0, Mat(), histG, 1,
+             &amp;nbins, &amp;histrange,
+             uniform, acummulate);
+    calcHist(&amp;planes[2], 1, 0, Mat(), histB, 1,
+             &amp;nbins, &amp;histrange,
+             uniform, acummulate);
+
+    normalize(histR, histR, 0, histImgR.rows, NORM_MINMAX, -1, Mat());
+    normalize(histG, histB, 0, histImgR.rows, NORM_MINMAX, -1, Mat());
+    normalize(histB, histB, 0, histImgR.rows, NORM_MINMAX, -1, Mat());
+
+    histImgR.setTo(Scalar(0));
+    histImgG.setTo(Scalar(0));
+    histImgB.setTo(Scalar(0));
+
+    for(int i=0; i&lt;nbins; i++){
+      line(histImgR, Point(i, histh),
+           Point(i, cvRound(histR.at&lt;float&gt;(i))),
+           Scalar(0, 0, 255), 1, 8, 0);
+      line(histImgG, Point(i, histh),
+           Point(i, cvRound(histG.at&lt;float&gt;(i))),
+           Scalar(0, 255, 0), 1, 8, 0);
+      line(histImgB, Point(i, histh),
+           Point(i, cvRound(histB.at&lt;float&gt;(i))),
+           Scalar(255, 0, 0), 1, 8, 0);
+    }
+    histImgR.copyTo(image(Rect(0, 0       ,nbins, histh)));
+    histImgG.copyTo(image(Rect(0, histh   ,nbins, histh)));
+    histImgB.copyTo(image(Rect(0, 2*histh ,nbins, histh)));
+    imshow("image", img_hist_equalized);
+    if(waitKey(30) &gt;= 0) break;
+  }
+  return 0;
+}</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_questão_6"><a class="link" href="#_questão_6">1.1.6. Questão 6</a></h4>
+<div class="paragraph">
+<p>Utilizando o programa pixels.cpp como referência, implemente um programa trocaregioes.cpp. Seu programa deverão trocar aleatoriamente regiões da imagem, formando uma espécie de quebra-cabeças. Explore o uso da classe Mat e seus construtores para criar as regiões que serão trocadas. O efeito é ilustrado na Figura Troca de regiões.</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="trocaregioes.png" alt="trocaregioes">
+</div>
+</div>
+<div class="sect4">
+<h5 id="_resolução_6"><a class="link" href="#_resolução_6">Resolução</a></h5>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-c++" data-lang="c++">#include &lt;iostream&gt;
+#include &lt;cv.h&gt;
+#include &lt;highgui.h&gt;
+
+	using namespace cv;
+	using namespace std;
+
+int main(int argc, char** argv){
+
+	Mat image;
+
+	image = imread(argv[1], CV_LOAD_IMAGE_GRAYSCALE);
+	if(!image.data)
+		cout &lt;&lt; "Não foi possível carregar a imagem" &lt;&lt; endl;
+
+	namedWindow("janela",WINDOW_AUTOSIZE);
+
+	int aux_1, aux_2;
+
+	 for(int i=0;i&lt;(image.cols)/2;i++){
+	     for(int j=0;j&lt;(image.rows)/2;j++){
+	     	aux_1 = image.at&lt;uchar&gt;((i+(image.cols/2)),(j+(image.rows/2)));
+	     	aux_2 = image.at&lt;uchar&gt;((i+(image.cols/2)),j);
+
+	     	image.at&lt;uchar&gt;((i+(image.cols/2)),(j+(image.rows/2))) = image.at&lt;uchar&gt;(i,j);
+	     	image.at&lt;uchar&gt;((i+(image.cols/2)),j) = image.at&lt;uchar&gt;(i,(j+(image.rows/2)));
+
+	     	image.at&lt;uchar&gt;(i,j) = aux_1;
+	     	image.at&lt;uchar&gt;(i,(j+(image.rows/2))) = aux_2;
+    }
+  }
+
+  imshow("janela", image);
   waitKey();
   return 0;
 }</code></pre>
@@ -639,7 +933,7 @@ int main(int argc, char** argv){
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2016-03-17 15:20:08 BRT
+Last updated 2016-03-17 21:06:08 BRT
 </div>
 </div>
 </body>

@@ -1,39 +1,32 @@
 #include <iostream>
 #include <cv.h>
-#include <opencv2/opencv.hpp>
 #include <highgui.h>
+	
+	using namespace cv;
+	using namespace std;
 
-using namespace cv;
-using namespace std;
+int main(int argc, char** argv){
 
-int main(int, char**){
-  Mat image;
-  Vec3b val;
+	Mat image;
 
-  image= imread("bolhas.png",CV_LOAD_IMAGE_GRAYSCALE);
-  if(!image.data)
-    cout << "nao abriu bolhas.png" << endl;
+	image = imread(argv[1], CV_LOAD_IMAGE_GRAYSCALE);
+	if(!image.data)
+		cout << "Não foi possível carregar a imagem" << endl;
 
-  namedWindow("janela",WINDOW_AUTOSIZE);
+	namedWindow("janela",WINDOW_AUTOSIZE);
 
-  for(int i=200;i<210;i++){
-    for(int j=10;j<200;j++){
-      image.at<uchar>(i,j)=0;
-    }
-  }
-  
-  imshow("janela", image);  
-  waitKey();
+	int aux_1, aux_2;
 
-  image= imread("bolhas.png",CV_LOAD_IMAGE_COLOR);
+	 for(int i=0;i<(image.cols)/2;i++){
+	     for(int j=0;j<(image.rows)/2;j++){
+	     	aux_1 = image.at<uchar>((i+(image.cols/2)),(j+(image.rows/2)));
+	     	aux_2 = image.at<uchar>((i+(image.cols/2)),j);
 
-  val[0] = 0;   //B
-  val[1] = 0;   //G
-  val[2] = 255; //R
-  
-  for(int i=200;i<210;i++){
-    for(int j=10;j<200;j++){
-      image.at<Vec3b>(i,j)=val;
+	     	image.at<uchar>((i+(image.cols/2)),(j+(image.rows/2))) = image.at<uchar>(i,j);
+	     	image.at<uchar>((i+(image.cols/2)),j) = image.at<uchar>(i,(j+(image.rows/2)));
+
+	     	image.at<uchar>(i,j) = aux_1;
+	     	image.at<uchar>(i,(j+(image.rows/2))) = aux_2;
     }
   }
 
