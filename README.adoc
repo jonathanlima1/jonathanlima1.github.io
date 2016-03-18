@@ -11,10 +11,8 @@ Flávio Mata Davim <flaviodavim@gmail.com>
 Jonathan Gabriel Lima da Costa <jonathangabriel@bct.ect.ufrn.br>
 
 :sectlinks: true
-:sectnums: off
 :source-highlighter: coderay
 :coderay-linenums-mode: inline
-
 == Exercícios
 
 Referente à Primeira Unidade da disciplina de Processamento Digital de Imagens.
