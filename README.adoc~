@@ -8,6 +8,8 @@ Jonathan Gabriel Lima da Costa <jonathangabriel@bct.ect.ufrn.br>
 
 :sectlinks: true
 :sectnums: = true
+:source-highlighter: coderay
+:coderay-linenums-mode: inline
 
 === Lista de Exercícios 1
 
@@ -21,11 +23,11 @@ image::regioes.png[]
 
 ===== Resolução
 
-[source,c++]
+[source,c++,linenums]
 ----
 include::regioes.cpp[]
 ----
-
+Basicamente pega-se os pontos e testa se o pixel está na região determinada, se sim, seto valor negativo do valor atual do pixel, com isso a região inteira fica com o efeito esperado.
 
 ==== Questão 3.2
 
@@ -39,7 +41,7 @@ image::trocaregioes.png[]
 ----
 include::trocaregioes.cpp[]
 ----
-
+Utiliza-se o conceito de swap para trocar pixel a pixel entre as regiões que serão trocadas, afim de gerar a imagem requisitada.
 ==== Questão 4.1
 
 Observando-se o programa labeling.cpp como exemplo, é possível verificar que caso existam mais de 255 objetos na cena, o processo de rotulação poderá ficar comprometido. Identifique a situação em que isso ocorre e proponha uma solução para este problema.
@@ -131,8 +133,8 @@ for(int i=0; i<height; i++){
     }
 ----
 No último for, vamos criar um for para percorrer todos os pixels da imagem. Como tiramos todas as bolhas que estavam nas bordas, é possível afirmar que o primeiro elemento da imagem vai ter a cor de fundo da imagem, então em decorrência disso quando a posição (0,0) tiver seu valor verificado pelo floodFill, todo o background da imagem vai ser alterado pro tom de cinza de valor 100.
-     Após isso vão sobrar os valores 255 referentes as bolhas e os pretos que são as bolhas, já que essas não estavam ligadas ao background e por isso não foram alteradas pela ação do floodFill.
-    O nosso programa sempre que acha um valor 255 muda ele para o mesmo valor do plano de fundo pra que aquele buraco não seja mais contado e adicionamos um ao número geral de bolhas. Quando ele acha o valor 0, quer dizer que há uma bolha com buraco, então adicionamos um ao número de bolhas com buraco e mudamos o valor de 0 para 200.
+Após isso vão sobrar os valores 255 referentes as bolhas e os pretos que são as bolhas, já que essas não estavam ligadas ao background e por isso não foram alteradas pela ação do floodFill.
+O nosso programa sempre que acha um valor 255 muda ele para o mesmo valor do plano de fundo pra que aquele buraco não seja mais contado e adicionamos um ao número geral de bolhas. Quando ele acha o valor 0, quer dizer que há uma bolha com buraco, então adicionamos um ao número de bolhas com buraco e mudamos o valor de 0 para 200.
 
 
 ==== Questão 5.1
@@ -147,17 +149,106 @@ image::equalize.png[]
 ----
 include::equalize.cpp[]
 ----
+
+Equalizar o video é possível através de uma função chamada equalizeHist, mas é necessário que sejam feitas algumas alterações.
+
+[source,c++]
+----
+cvtColor(image, img_hist_equalized, CV_BGR2YCrCb); 
+    //Muda a cor da imagem do formato BGR para o YCrCb 
+
+    split(img_hist_equalized,planes); 
+    //Divide a imagem em que vai ser equalizada em três canais de cor
+
+
+    equalizeHist(planes[0], planes[0]); //Equaliza o histograma no canal 1
+    //equalizeHist(planes[1], planes[1]);
+    //equalizeHist(planes[2], planes[2]);
+
+    merge(planes,img_hist_equalized); 
+    //Junta novamente os três canais, sendo que o primeiro canal foi equalizado, alterando a imagem
+
+    cvtColor(img_hist_equalized, img_hist_equalized, CV_YCrCb2BGR);
+----
+Como o código trabalha com video, e o video é um conjunto de imagens, cada imagem que forma o video vai ser processada antes de ser imprimida. Para isso a cor da imagem vai ser alterada de de RGB para YCrCb e essa imagem vai ser salva em img_hist_equalized.
+Depois de ser colocada em nesse formato a nova imagem é dividida em três vetores que indicam os histogramas de imagem. Vamos, através do equalizeHist, equalizar um deles e salvar no mesmo vetor. Quando isso for feito, juntamos novamente os três canais em um só e para ser possível a impressão, mudamos a cor da imagem de volta para RGB.
+
 ==== Questão 5.2
 
 Utilizando o programa exemplos/histogram.cpp como referência, implemente um programa motiondetector.cpp. Este deverá continuamente calcular o histograma da imagem (apenas uma componente de cor é suficiente) e compará-lo com o último histograma calculado. Quando a diferença entre estes ultrapassar um limiar pré-estabelecido, ative um alarme. Utilize uma função de comparação que julgar conveniente.
-
-image::trocaregioes.png[]
 
 ===== Resolução
 
 [source,c++]
 ----
-include::trocaregioes.cpp[]
+include::motiondetector.cpp[]
 ----
 
+Segue um trecho do código:
+[source,c++]
+----
+calcHist(&planes[0], 1, 0, Mat(), histR, 1,
+             &nbins, &histrange,
+             uniform, acummulate);
 
+    if(count>0){
+
+      if(compareHist(histR, histPast, CV_COMP_CORREL) < 0.9){
+        //notify-send ["title"] "movimento";
+        num_movimentos++;
+        cout << "Movimento " << num_movimentos << endl; 
+      }
+    }
+
+    calcHist(&planes[0], 1, 0, Mat(), histPast, 1,
+             &nbins, &histrange,
+             uniform, acummulate);
+----
+Essa atividade pede para avisar quando houver alguma mudança no histograma comparado com o da imagem anterior que extrapole certo limiar. Precisando trabalhar só com um histograma, podemos adicionar o valor de R da imagem em duas variáveis histR e histPast.
+A partir da segunda interação, quando atualizarmos o histR, comparamos ele com o histograma passado, histPast, antes desse ser atualizado. Fazemos isso através do compareHist usando o método de comparação da correlação que gera um valor entre -1 e 1.
+Para acionar o alarme (cout), o valor que essa função retornar tem que ser menor que 0,9.
+
+==== Questão 6.1
+
+Utilizando o programa filtroespacial.cpp como referência, implemente um programa laplgauss.cpp. O programa deverá acrescentar mais uma funcionalidade ao exemplo fornecido, permitindo que seja calculado o laplaciano do gaussiano das imagens capturadas. Compare o resultado desse filtro com a simples aplicação do filtro laplaciano.
+
+===== Resolução
+
+[source,c++]
+----
+include::laplgauss.cpp[]
+----
+Para fazer o laplaciano do gaussiano, utilizamos dois métodos. O primeiro é criando duas máscaras, uma do gaussiano e outra do laplaciano, e a soma das duas forma a máscara que vai ser aplicada na imagem. Isso é feito no seguinte trecho:
+[source,c++]
+----
+	mask = Mat(3, 3, CV_32F, gauss);
+        scaleAdd(mask, 1/16.0, Mat::zeros(3,3,CV_32F), mask1);
+	mask2 = Mat(3, 3, CV_32F, laplacian);
+        mask = mask1 + mask2;
+        printmask(mask);
+----
+A outra forma é aplicar o filtro gaussiano na imagem e automaticamente aplicar o filtro laplaciano. Isso é feito da seguinte forma:
+[source,c++]
+----    
+	mask = Mat(3, 3, CV_32F, gauss);
+        scaleAdd(mask, 1/16.0, Mat::zeros(3,3,CV_32F), mask1);
+        mask = mask1;
+        printmask(mask);
+        mask = Mat(3, 3, CV_32F, laplacian);
+        printmask(mask);
+----
+
+==== Questão 7.1
+
+Utilizando o programa addweighted.cpp como referência, implemente um programa tiltshift.cpp. Três ajustes deverão ser providos na tela da interface:
+
+* um ajuste para regular a altura da região central que entrará em foco;
+* um ajuste para regular a força de decaimento da região borrada;
+* um ajuste para regular a posição vertical do centro da região que entrará em foco. Finalizado o programa, a imagem produzida deverá ser salva em arquivo.
+
+===== Resolução
+
+[source,c++]
+----
+include::tiltshift.cpp[]
+----
