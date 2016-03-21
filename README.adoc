@@ -144,8 +144,6 @@ O nosso programa sempre que acha um valor 255 muda ele para o mesmo valor do pla
 
 Utilizando o programa histogram.cpp como referência, implemente um programa equalize.cpp. Este deverá, para cada imagem capturada, realizar a equalização do histogram antes de exibir a imagem. Teste sua implementação apontando a câmera para ambientes com iluminações variadas e observando o efeito gerado.
 
-image::equalize.png[]
-
 ==== Resolução
 
 [source,c++]

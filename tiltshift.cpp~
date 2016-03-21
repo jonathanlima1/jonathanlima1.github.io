@@ -6,107 +6,140 @@ using namespace cv;
 using namespace std;
 
 double d;
-int d_slider = 0;
+int d_slider = 6;
 int d_slider_max = 100;
 
 double altura;
 int centro;
 
-int altura_slider = 0;
+int altura_slider = 20;
 int altura_slider_max = 100;
 
 int centro_slider = 0;
 int centro_slider_max = 100;
 
-double alfa;
+Mat imagemF, imagemFB, alfa, alfa2;
 
-Mat imagemF, imagemFB;
-
-Mat imagem, imagemB, tilt, imagem1, imagem2;
+Mat imagemOriginal, imagemBorrada, imagem32, imagemB32, tilt, tilt32;
 
 char TrackbarName[50];
 
-void on_trackbar_blend(int, void*){
- d = (double) d_slider/1.0 ;
- int l1 = centro - altura/2;
- int l2 = centro + altura/2;
+void atualizarImagem(){
 
- imagem1 = imread("imagemTilt1.jpeg");
- imagem2 = imread("imagemTilt2.jpeg");
- 
- for(int j = 0; j<imagem.size().width; j++){
-	for(int i = 0; i<imagem.size().height; i++){
-		if(i <= l1 || i>=l2){
-	 		imagem1.at<uchar>(i,j) = 0;
-			imagem2.at<uchar>(i,j) = 1;
-		}else{
-			imagem1.at<uchar>(i,j) = 1;
-			imagem2.at<uchar>(i,j) = 0;
-		}
-	}
- }
+  imagemOriginal.convertTo(imagem32, CV_32FC3);
+  imagemBorrada.convertTo(imagemB32, CV_32FC3);
 
- imshow("Teste", imagem1);
-  imshow("Teste2", imagem2);
+  multiply(imagem32, alfa, imagemF);
+  multiply(imagemB32, alfa2, imagemFB);
 
-  multiply(imagem, imagem1, imagemF, 1.0, -1 );
+  add(imagemF,imagemFB,tilt32);
 
-  multiply(imagemB, imagem2, imagemFB, 1.0, -1 );
+  tilt32.convertTo(tilt, CV_8UC3);
 
- //for(int i = 0; i<imagem.size().height; i++){
- //	alfa = 0.5 * ( tanh( (-l1)/d ) - tanh( (-l2)/d ) );
- //	addWeighted( imagemF, alfa, imagemFB, 1-alfa, 0.0, tilt);
- //}
-   tilt = imagemF + imagemFB;
-  //add(imagemF, imagemFB, tilt, Mat(), -1); 
   imshow("TiltShift", tilt);
+}
+
+void tiltShift(){
+  int l1 = centro_slider - altura_slider/2 -50;
+  int l2 = centro_slider + altura_slider/2 -50;
+
+  alfa = Mat::zeros(imagemOriginal.rows, imagemOriginal.cols, CV_32F);
+  alfa2 = Mat::zeros(imagemOriginal.rows, imagemOriginal.cols, CV_32F);
+
+  for(int i=0; i < imagemOriginal.rows; i++){
+
+    double x = i - centro - altura/2;
+    float valor = 0.5f * ( tanh( (x-l1)/d ) - tanh( (x-l2)/d ) );
+
+    for(int j=0; j < imagemOriginal.cols; j++){
+      alfa.at<float>(i,j) = valor;
+      alfa2.at<float>(i,j) = 1 - valor;
+    }
+  }
+
+  Mat imagem1[] = {alfa,alfa,alfa};
+  Mat imagem2[] = {alfa2,alfa2,alfa2};
+
+  merge(imagem1, 3, alfa);
+  merge(imagem2, 3, alfa2);
+
+  atualizarImagem();
+}
+
+void on_trackbar_blend(int, void*){
+  d = (double) d_slider ;
+
+  if (d < 1)
+    d = 1;
+
+  tiltShift();
 }
 
 void on_trackbar_line(int, void*){
 
-  altura = altura_slider*imagem.size().height/altura_slider_max;
+  altura = altura_slider*imagemOriginal.size().height/altura_slider_max;
 
-  on_trackbar_blend(d_slider,0);
+  if (altura == 0) {
+      altura = 1;
+  }
+
+  if (altura > imagemOriginal.size().height) {
+      altura = imagemOriginal.size().height;
+  }
+
+  tiltShift();
 }
 
 void on_trackbar_line2(int, void*){
-  centro = centro_slider*imagem.size().height/centro_slider_max;
+  centro = centro_slider*imagemOriginal.size().height/centro_slider_max;
 
-  on_trackbar_blend(d_slider,0);
+  tiltShift();
 }
 
 int main(int argvc, char** argv){
 
-  imagem = imread("blend2.jpg");
+  imagemOriginal = imread("tiltshift.jpg");
+  imagemBorrada = imagemOriginal.clone();
 
-  tilt = imread("blend2.jpg");
+  Mat aux, mask, mask1;
+  float media[] = {1,1,1,
+                   1,1,1,
+                   1,1,1};
 
-  erode(imagem, imagemB, Mat(), Point(-1,-1), 2, BORDER_CONSTANT, morphologyDefaultBorderValue() );
+  mask = Mat(3, 3, CV_32F, media);
 
-  imagem1 = imread("imagemTilt1.jpeg");
-  imagem2 = imread("imagemTilt2.jpeg");
+  scaleAdd(mask, 1/9.0, Mat::zeros(3,3,CV_32F), mask1);
+  mask = mask1;
+  imagemBorrada.convertTo(aux, CV_32F);
+
+  for (int i = 0; i < 7; i++) {
+      filter2D(aux, aux, aux.depth(), mask, Point(1, 1), 0);
+  }
+
+  aux=abs(aux);
+  aux.convertTo(imagemBorrada, CV_8UC3);
 
   namedWindow("TiltShift", 1);
 
   sprintf( TrackbarName, "Decaimento" );
   createTrackbar( TrackbarName, "TiltShift",
-				  &d_slider,
-				  d_slider_max,
-				  on_trackbar_blend );
+          &d_slider,
+          d_slider_max,
+          on_trackbar_blend );
   on_trackbar_blend(d_slider, 0 );
 
   sprintf( TrackbarName, "Centro");
   createTrackbar( TrackbarName, "TiltShift",
-				  &centro_slider,
-				  centro_slider_max,
-				  on_trackbar_line2 );
+          &centro_slider,
+          centro_slider_max,
+          on_trackbar_line2 );
   on_trackbar_line2(centro_slider, 0 );
 
   sprintf( TrackbarName, "Altura");
   createTrackbar( TrackbarName, "TiltShift",
-				  &altura_slider,
-				  altura_slider_max,
-				  on_trackbar_line );
+          &altura_slider,
+          altura_slider_max,
+          on_trackbar_line );
   on_trackbar_line(altura_slider, 0 );
 
   waitKey(0);
