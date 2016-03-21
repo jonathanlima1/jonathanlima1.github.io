@@ -21,7 +21,7 @@ Referente à Primeira Unidade da disciplina de Processamento Digital de Imagens.
 
 Utilizando o programa pixels.cpp como referência, implemente um programa regions.cpp. Esse programa deverá solicitar ao usuário as coordenadas de dois pontos  P1 e P2 localizados dentro dos limites do tamanho da imagem e exibir que lhe for fornecida. Entretanto, a região definida pelo retângulo de vértices opostos definidos pelos pontos P1 e P2 será exibida com o negativo da imagem na região correspondente. O efeito é ilustrado na Figura Regiões.
 
-image::regioes.png[]
+image::regioes.png[title = Região Negativa]
 
 ==== Resolução
 
@@ -35,7 +35,7 @@ Basicamente pega-se os pontos e testa se o pixel está na região determinada, s
 
 Utilizando o programa pixels.cpp como referência, implemente um programa trocaregioes.cpp. Seu programa deverão trocar aleatoriamente regiões da imagem, formando uma espécie de quebra-cabeças. Explore o uso da classe Mat e seus construtores para criar as regiões que serão trocadas. O efeito é ilustrado na Figura Troca de regiões.
 
-image::trocaregioes.png[]
+image::trocaregioes.png[title = Regiões Trocadas]
 
 ==== Resolução
 
@@ -144,8 +144,6 @@ O nosso programa sempre que acha um valor 255 muda ele para o mesmo valor do pla
 
 Utilizando o programa histogram.cpp como referência, implemente um programa equalize.cpp. Este deverá, para cada imagem capturada, realizar a equalização do histogram antes de exibir a imagem. Teste sua implementação apontando a câmera para ambientes com iluminações variadas e observando o efeito gerado.
 
-image::equalize.png[]
-
 ==== Resolução
 
 [source,c++]
@@ -252,6 +250,48 @@ Utilizando o programa addweighted.cpp como referência, implemente um programa t
 ==== Resolução
 
 [source,c++]
+.tiltshift.cpp
 ----
 include::tiltshift.cpp[]
 ----
+
+Para operar o tiltshift necessita-se calcular duas matrizes que operam sobre a imagem e a imagem borrada, feito da seguinte maneira:
+[source,c++]
+----    
+	alfa = Mat::zeros(imagemOriginal.rows, imagemOriginal.cols, CV_32F);
+	alfa2 = Mat::zeros(imagemOriginal.rows, imagemOriginal.cols, CV_32F);
+
+	for(int i=0; i < imagemOriginal.rows; i++){
+
+		double x = 100*i/(imagemOriginal.size().height - 1) - 50;
+    		float valor = 0.5f * ( tanh( (x-l1)/d ) - tanh( (x-l2)/d ) );
+
+    		for(int j=0; j < imagemOriginal.cols; j++){
+      			alfa.at<float>(i,j) = valor;
+      			alfa2.at<float>(i,j) = 1 - valor;
+    		}
+	}
+----
+
+Após isso, a multiplicação e as devidas conversões são realizadas no seguinte trecho:
+[source,c++]
+----    
+	imagemOriginal.convertTo(imagem32, CV_32FC3);
+	imagemBorrada.convertTo(imagemB32, CV_32FC3);
+
+  	multiply(imagem32, alfa, imagemF);
+  	multiply(imagemB32, alfa2, imagemFB);
+
+  	add(imagemF,imagemFB,tilt32);
+
+  	tilt32.convertTo(tilt, CV_8UC3);
+
+  	imshow("TiltShift", tilt);
+----
+
+Aplicando o programa acima para a imagem tiltshift obtemos como resultado para centro = 50, altura = 40 e decaimento = 6 é a imagem tiltshift2.
+
+image::tiltshift.jpg[title = TiltShift]
+
+image::tiltshift2.jpg[title = TiltShift2]
+

@@ -498,6 +498,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <div class="content">
 <img src="regioes.png" alt="regioes">
 </div>
+<div class="title">Figure 1. Região Negativa</div>
 </div>
 <div class="sect3">
 <h4 id="_resolução"><a class="link" href="#_resolução">Resolução</a></h4>
@@ -549,6 +550,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <div class="content">
 <img src="trocaregioes.png" alt="trocaregioes">
 </div>
+<div class="title">Figure 2. Regiões Trocadas</div>
 </div>
 <div class="sect3">
 <h4 id="_resolução_2"><a class="link" href="#_resolução_2">Resolução</a></h4>
@@ -619,6 +621,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <div class="content">
 <img src="bolhas.png" alt="bolhas">
 </div>
+<div class="title">Figure 3. Bolhas</div>
 </div>
 <div class="sect3">
 <h4 id="_resolução_4"><a class="link" href="#_resolução_4">Resolução</a></h4>
@@ -1257,6 +1260,7 @@ Para acionar o alarme (cout), o valor que essa função retornar tem que ser men
 <div class="sect3">
 <h4 id="_resolução_8"><a class="link" href="#_resolução_8">Resolução</a></h4>
 <div class="listingblock">
+<div class="title">tiltshift.cpp</div>
 <div class="content">
 <pre class="CodeRay highlight"><code data-lang="c++"><span class="preprocessor">#include</span> <span class="include">&lt;iostream&gt;</span>
 <span class="preprocessor">#include</span> <span class="include">&lt;opencv2/opencv.hpp&gt;</span>
@@ -1407,6 +1411,59 @@ Mat imagemOriginal, imagemBorrada, imagem32, imagemB32, tilt, tilt32;
 }</code></pre>
 </div>
 </div>
+<div class="paragraph">
+<p>Para operar o tiltshift necessita-se calcular duas matrizes que operam sobre a imagem e a imagem borrada, feito da seguinte maneira:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="c++">        alfa = Mat::zeros(imagemOriginal.rows, imagemOriginal.cols, CV_32F);
+        alfa2 = Mat::zeros(imagemOriginal.rows, imagemOriginal.cols, CV_32F);
+
+        <span class="keyword">for</span>(<span class="predefined-type">int</span> i=<span class="integer">0</span>; i &lt; imagemOriginal.rows; i++){
+
+                <span class="predefined-type">double</span> x = <span class="integer">100</span>*i/(imagemOriginal.size().height - <span class="integer">1</span>) - <span class="integer">50</span>;
+                    <span class="predefined-type">float</span> valor = <span class="float">0</span><span class="float">.5f</span> * ( tanh( (x-l1)/d ) - tanh( (x-l2)/d ) );
+
+                    <span class="keyword">for</span>(<span class="predefined-type">int</span> j=<span class="integer">0</span>; j &lt; imagemOriginal.cols; j++){
+                              alfa.at&lt;<span class="predefined-type">float</span>&gt;(i,j) = valor;
+                              alfa2.at&lt;<span class="predefined-type">float</span>&gt;(i,j) = <span class="integer">1</span> - valor;
+                    }
+        }</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Após isso, a multiplicação e as devidas conversões são realizadas no seguinte trecho:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="c++">        imagemOriginal.convertTo(imagem32, CV_32FC3);
+        imagemBorrada.convertTo(imagemB32, CV_32FC3);
+
+          multiply(imagem32, alfa, imagemF);
+          multiply(imagemB32, alfa2, imagemFB);
+
+          add(imagemF,imagemFB,tilt32);
+
+          tilt32.convertTo(tilt, CV_8UC3);
+
+          imshow(<span class="string"><span class="delimiter">&quot;</span><span class="content">TiltShift</span><span class="delimiter">&quot;</span></span>, tilt);</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Aplicando o programa acima para a imagem tiltshift obtemos como resultado para centro = 50, altura = 40 e decaimento = 6 é a imagem tiltshift2.</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="tiltshift.jpg" alt="tiltshift">
+</div>
+<div class="title">Figure 4. TiltShift</div>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="tiltshift2.jpg" alt="tiltshift2">
+</div>
+<div class="title">Figure 5. TiltShift2</div>
+</div>
 </div>
 </div>
 </div>
@@ -1414,7 +1471,7 @@ Mat imagemOriginal, imagemBorrada, imagem32, imagemB32, tilt, tilt32;
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2016-03-17 22:45:21 BRT
+Last updated 2016-03-21 19:24:31 BRT
 </div>
 </div>
 </body>
