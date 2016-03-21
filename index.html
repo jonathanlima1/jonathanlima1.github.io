@@ -807,11 +807,6 @@ O nosso programa sempre que acha um valor 255 muda ele para o mesmo valor do pla
 <div class="paragraph">
 <p>Utilizando o programa histogram.cpp como referência, implemente um programa equalize.cpp. Este deverá, para cada imagem capturada, realizar a equalização do histogram antes de exibir a imagem. Teste sua implementação apontando a câmera para ambientes com iluminações variadas e observando o efeito gerado.</p>
 </div>
-<div class="imageblock">
-<div class="content">
-<img src="equalize.png" alt="equalize">
-</div>
-</div>
 <div class="sect3">
 <h4 id="_resolução_5"><a class="link" href="#_resolução_5">Resolução</a></h4>
 <div class="listingblock">
@@ -1271,107 +1266,140 @@ Para acionar o alarme (cout), o valor que essa função retornar tem que ser men
 <span class="directive">using</span> <span class="keyword">namespace</span> std;
 
 <span class="predefined-type">double</span> d;
-<span class="predefined-type">int</span> d_slider = <span class="integer">0</span>;
+<span class="predefined-type">int</span> d_slider = <span class="integer">6</span>;
 <span class="predefined-type">int</span> d_slider_max = <span class="integer">100</span>;
 
 <span class="predefined-type">double</span> altura;
 <span class="predefined-type">int</span> centro;
 
-<span class="predefined-type">int</span> altura_slider = <span class="integer">0</span>;
+<span class="predefined-type">int</span> altura_slider = <span class="integer">20</span>;
 <span class="predefined-type">int</span> altura_slider_max = <span class="integer">100</span>;
 
 <span class="predefined-type">int</span> centro_slider = <span class="integer">0</span>;
 <span class="predefined-type">int</span> centro_slider_max = <span class="integer">100</span>;
 
-<span class="predefined-type">double</span> alfa;
+Mat imagemF, imagemFB, alfa, alfa2;
 
-Mat imagemF, imagemFB;
-
-Mat imagem, imagemB, tilt, imagem1, imagem2;
+Mat imagemOriginal, imagemBorrada, imagem32, imagemB32, tilt, tilt32;
 
 <span class="predefined-type">char</span> TrackbarName[<span class="integer">50</span>];
 
-<span class="directive">void</span> on_trackbar_blend(<span class="predefined-type">int</span>, <span class="directive">void</span>*){
- d = (<span class="predefined-type">double</span>) d_slider/<span class="float">1</span><span class="float">.0</span> ;
- <span class="predefined-type">int</span> l1 = centro - altura/<span class="integer">2</span>;
- <span class="predefined-type">int</span> l2 = centro + altura/<span class="integer">2</span>;
+<span class="directive">void</span> atualizarImagem(){
 
- imagem1 = imread(<span class="string"><span class="delimiter">&quot;</span><span class="content">imagemTilt1.jpeg</span><span class="delimiter">&quot;</span></span>);
- imagem2 = imread(<span class="string"><span class="delimiter">&quot;</span><span class="content">imagemTilt2.jpeg</span><span class="delimiter">&quot;</span></span>);
+  imagemOriginal.convertTo(imagem32, CV_32FC3);
+  imagemBorrada.convertTo(imagemB32, CV_32FC3);
 
- <span class="keyword">for</span>(<span class="predefined-type">int</span> i = <span class="integer">0</span>; i&lt;imagem.size().height; i++){
-        <span class="keyword">for</span>(<span class="predefined-type">int</span> j = <span class="integer">0</span>; j&lt;imagem.size().width; j++){
-                <span class="keyword">if</span>(i &lt;= l1 || i&gt;=l2){
-                         imagem1.at&lt;uchar&gt;(i,j) = <span class="integer">0</span>;
-                        imagem2.at&lt;uchar&gt;(i,j) = <span class="integer">1</span>;
-                }<span class="keyword">else</span>{
-                        imagem1.at&lt;uchar&gt;(i,j) = <span class="integer">1</span>;
-                        imagem2.at&lt;uchar&gt;(i,j) = <span class="integer">0</span>;
-                }
-        }
- }
+  multiply(imagem32, alfa, imagemF);
+  multiply(imagemB32, alfa2, imagemFB);
 
- imshow(<span class="string"><span class="delimiter">&quot;</span><span class="content">Teste</span><span class="delimiter">&quot;</span></span>, imagem1);
-  imshow(<span class="string"><span class="delimiter">&quot;</span><span class="content">Teste2</span><span class="delimiter">&quot;</span></span>, imagem2);
+  add(imagemF,imagemFB,tilt32);
 
-  multiply(imagem, imagem1, imagemF, <span class="float">1</span><span class="float">.0</span>, -<span class="integer">1</span> );
+  tilt32.convertTo(tilt, CV_8UC3);
 
-  multiply(imagemB, imagem2, imagemFB, <span class="float">1</span><span class="float">.0</span>, -<span class="integer">1</span> );
-
- <span class="comment">//for(int i = 0; i&lt;imagem.size().height; i++){</span>
- <span class="comment">//        alfa = 0.5 * ( tanh( (-l1)/d ) - tanh( (-l2)/d ) );</span>
- <span class="comment">//        addWeighted( imagemF, alfa, imagemFB, 1-alfa, 0.0, tilt);</span>
- <span class="comment">//}</span>
-   tilt = imagemF + imagemFB;
-  <span class="comment">//add(imagemF, imagemFB, tilt, Mat(), -1);</span>
   imshow(<span class="string"><span class="delimiter">&quot;</span><span class="content">TiltShift</span><span class="delimiter">&quot;</span></span>, tilt);
+}
+
+<span class="directive">void</span> tiltShift(){
+  <span class="predefined-type">int</span> l1 = centro_slider - altura_slider/<span class="integer">2</span> -<span class="integer">50</span>;
+  <span class="predefined-type">int</span> l2 = centro_slider + altura_slider/<span class="integer">2</span> -<span class="integer">50</span>;
+
+  alfa = Mat::zeros(imagemOriginal.rows, imagemOriginal.cols, CV_32F);
+  alfa2 = Mat::zeros(imagemOriginal.rows, imagemOriginal.cols, CV_32F);
+
+  <span class="keyword">for</span>(<span class="predefined-type">int</span> i=<span class="integer">0</span>; i &lt; imagemOriginal.rows; i++){
+
+    <span class="predefined-type">double</span> x = <span class="integer">100</span>*i/(imagemOriginal.size().height - <span class="integer">1</span>) - <span class="integer">50</span>;
+    <span class="predefined-type">float</span> valor = <span class="float">0</span><span class="float">.5f</span> * ( tanh( (x-l1)/d ) - tanh( (x-l2)/d ) );
+
+    <span class="keyword">for</span>(<span class="predefined-type">int</span> j=<span class="integer">0</span>; j &lt; imagemOriginal.cols; j++){
+      alfa.at&lt;<span class="predefined-type">float</span>&gt;(i,j) = valor;
+      alfa2.at&lt;<span class="predefined-type">float</span>&gt;(i,j) = <span class="integer">1</span> - valor;
+    }
+  }
+
+  Mat imagem1[] = {alfa,alfa,alfa};
+  Mat imagem2[] = {alfa2,alfa2,alfa2};
+
+  merge(imagem1, <span class="integer">3</span>, alfa);
+  merge(imagem2, <span class="integer">3</span>, alfa2);
+
+  atualizarImagem();
+}
+
+<span class="directive">void</span> on_trackbar_blend(<span class="predefined-type">int</span>, <span class="directive">void</span>*){
+  d = (<span class="predefined-type">double</span>) d_slider ;
+
+  <span class="keyword">if</span> (d &lt; <span class="integer">1</span>)
+    d = <span class="integer">1</span>;
+
+  tiltShift();
 }
 
 <span class="directive">void</span> on_trackbar_line(<span class="predefined-type">int</span>, <span class="directive">void</span>*){
 
-  altura = altura_slider*imagem.size().height/altura_slider_max;
+  altura = altura_slider*imagemOriginal.size().height/altura_slider_max;
 
-  on_trackbar_blend(d_slider,<span class="integer">0</span>);
+  <span class="keyword">if</span> (altura == <span class="integer">0</span>) {
+      altura = <span class="integer">1</span>;
+  }
+
+  <span class="keyword">if</span> (altura &gt; imagemOriginal.size().height) {
+      altura = imagemOriginal.size().height;
+  }
+
+  tiltShift();
 }
 
 <span class="directive">void</span> on_trackbar_line2(<span class="predefined-type">int</span>, <span class="directive">void</span>*){
-  centro = centro_slider*imagem.size().height/centro_slider_max;
+  centro = centro_slider*imagemOriginal.size().height/centro_slider_max;
 
-  on_trackbar_blend(d_slider,<span class="integer">0</span>);
+  tiltShift();
 }
 
 <span class="predefined-type">int</span> main(<span class="predefined-type">int</span> argvc, <span class="predefined-type">char</span>** argv){
 
-  imagem = imread(<span class="string"><span class="delimiter">&quot;</span><span class="content">blend2.jpg</span><span class="delimiter">&quot;</span></span>);
+  imagemOriginal = imread(<span class="string"><span class="delimiter">&quot;</span><span class="content">tiltshift.jpg</span><span class="delimiter">&quot;</span></span>);
+  imagemBorrada = imagemOriginal.clone();
 
-  tilt = imread(<span class="string"><span class="delimiter">&quot;</span><span class="content">blend2.jpg</span><span class="delimiter">&quot;</span></span>);
+  Mat aux, mask, mask1;
+  <span class="predefined-type">float</span> media[] = {<span class="integer">1</span>,<span class="integer">1</span>,<span class="integer">1</span>,
+                   <span class="integer">1</span>,<span class="integer">1</span>,<span class="integer">1</span>,
+                   <span class="integer">1</span>,<span class="integer">1</span>,<span class="integer">1</span>};
 
-  erode(imagem, imagemB, Mat(), Point(-<span class="integer">1</span>,-<span class="integer">1</span>), <span class="integer">2</span>, BORDER_CONSTANT, morphologyDefaultBorderValue() );
+  mask = Mat(<span class="integer">3</span>, <span class="integer">3</span>, CV_32F, media);
 
-  imagem1 = imread(<span class="string"><span class="delimiter">&quot;</span><span class="content">imagemTilt1.jpeg</span><span class="delimiter">&quot;</span></span>);
-  imagem2 = imread(<span class="string"><span class="delimiter">&quot;</span><span class="content">imagemTilt2.jpeg</span><span class="delimiter">&quot;</span></span>);
+  scaleAdd(mask, <span class="integer">1</span>/<span class="float">9</span><span class="float">.0</span>, Mat::zeros(<span class="integer">3</span>,<span class="integer">3</span>,CV_32F), mask1);
+  mask = mask1;
+  imagemBorrada.convertTo(aux, CV_32F);
+
+  <span class="keyword">for</span> (<span class="predefined-type">int</span> i = <span class="integer">0</span>; i &lt; <span class="integer">7</span>; i++) {
+      filter2D(aux, aux, aux.depth(), mask, Point(<span class="integer">1</span>, <span class="integer">1</span>), <span class="integer">0</span>);
+  }
+
+  aux=abs(aux);
+  aux.convertTo(imagemBorrada, CV_8UC3);
 
   namedWindow(<span class="string"><span class="delimiter">&quot;</span><span class="content">TiltShift</span><span class="delimiter">&quot;</span></span>, <span class="integer">1</span>);
 
   sprintf( TrackbarName, <span class="string"><span class="delimiter">&quot;</span><span class="content">Decaimento</span><span class="delimiter">&quot;</span></span> );
   createTrackbar( TrackbarName, <span class="string"><span class="delimiter">&quot;</span><span class="content">TiltShift</span><span class="delimiter">&quot;</span></span>,
-                                  &amp;d_slider,
-                                  d_slider_max,
-                                  on_trackbar_blend );
+          &amp;d_slider,
+          d_slider_max,
+          on_trackbar_blend );
   on_trackbar_blend(d_slider, <span class="integer">0</span> );
 
   sprintf( TrackbarName, <span class="string"><span class="delimiter">&quot;</span><span class="content">Centro</span><span class="delimiter">&quot;</span></span>);
   createTrackbar( TrackbarName, <span class="string"><span class="delimiter">&quot;</span><span class="content">TiltShift</span><span class="delimiter">&quot;</span></span>,
-                                  &amp;centro_slider,
-                                  centro_slider_max,
-                                  on_trackbar_line2 );
+          &amp;centro_slider,
+          centro_slider_max,
+          on_trackbar_line2 );
   on_trackbar_line2(centro_slider, <span class="integer">0</span> );
 
   sprintf( TrackbarName, <span class="string"><span class="delimiter">&quot;</span><span class="content">Altura</span><span class="delimiter">&quot;</span></span>);
   createTrackbar( TrackbarName, <span class="string"><span class="delimiter">&quot;</span><span class="content">TiltShift</span><span class="delimiter">&quot;</span></span>,
-                                  &amp;altura_slider,
-                                  altura_slider_max,
-                                  on_trackbar_line );
+          &amp;altura_slider,
+          altura_slider_max,
+          on_trackbar_line );
   on_trackbar_line(altura_slider, <span class="integer">0</span> );
 
   waitKey(<span class="integer">0</span>);
@@ -1386,7 +1414,7 @@ Mat imagem, imagemB, tilt, imagem1, imagem2;
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2016-03-17 22:36:12 BRT
+Last updated 2016-03-17 22:45:21 BRT
 </div>
 </div>
 </body>
