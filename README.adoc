@@ -13,7 +13,7 @@ Jonathan Gabriel Lima da Costa <jonathangabriel@bct.ect.ufrn.br>
 :sectlinks: true
 :source-highlighter: coderay
 :coderay-linenums-mode: inline
-== Exercícios
+== Exercícios I
 
 Referente à Primeira Unidade da disciplina de Processamento Digital de Imagens.
 	
@@ -295,3 +295,111 @@ image::tiltshift.jpg[title = TiltShift]
 
 image::tiltshift2.jpg[title = TiltShift2]
 
+== Exercícios II
+
+Referente à Segunda Unidade da disciplina de Processamento Digital de Imagens.
+	
+=== Questão 8.2
+
+Utilizando o programa dft.cpp como referência, implemente o filtro homomórfico para melhorar imagens com iluminação irregular. Crie uma cena mal iluminada e ajuste os parâmetros do filtro homomórfico para corrigir a iluminação da melhor forma possível. Assuma que a imagem fornecida é em tons de cinza.
+
+==== Resolução
+
+[source,c++]
+----
+include::filtrohomomorfico.cpp[]
+----
+O código acima consiste em realizar o processo de filtragem. Na primeira parte, tratamos a imagem, onde se é aplicada um logaritmo natural antes de levar para o domínio da frequência.
+
+[source,c++]
+----    
+	image.convertTo(image, CV_32F);
+	log(image, image);
+----
+
+Então se realiza a transformada de Fourier:
+
+[source,c++]
+----    
+	dft(complexImage, complexImage);
+	deslocaDFT(complexImage);
+----
+
+Então é aplicado o filtro na imagem:
+
+[source,c++]
+----    
+    float d0, gamaH, gamaL;
+    gamaL = gamaL_slider/10.0;
+    gamaH = gamaH_slider/10.0;
+    d0 = d0_slider/10.0;
+
+    // prepara o filtro passa-baixas ideal
+    for(int i=0; i<dft_M; i++){
+
+        for(int j=0; j<dft_N; j++){
+            tmp.at<float> (i,j) = (gamaH - gamaL) *
+                    (1.0 - exp(-1.0 * (float)c_slider * ((pow(((float) i - dft_M/2.0),2)+pow(((float) j - dft_N/2.0),2))/(d0*d0)) ))
+                    + gamaL;
+        }
+    }
+
+    // cria a matriz com as componentes do filtro e junta
+    // ambas em uma matriz multicanal complexa
+    Mat comps[]= {tmp, tmp};
+    merge(comps, 2, filter);
+
+    // aplica o filtro frequencial
+    mulSpectrums(complexImage,filter,complexImage,0);
+----
+
+Então é aplicada a inversa de Fourier e a exponencial na imagem no domínio do espaço:
+[source,c++]
+----    
+    deslocaDFT(complexImage);
+    idft(complexImage, complexImage);
+
+    planos.clear();
+
+    // separa as partes real e imaginaria da imagem filtrada
+    split(complexImage, planos);
+
+    // normaliza a parte real para exibicao
+    normalize(planos[0], planos[0], 0, 1, CV_MINMAX);
+    planos[0].convertTo(planos[0], CV_32F);
+----
+
+image::homomorfico_original.png[title = Imagem Original]
+image::homomorfico1.png[title = Imagem Filtrada]
+image::homomorfico2.png[title = Imagem Filtrada 2]
+image::homomorfico3.png[title = Imagem Filtrada 3]
+
+=== Questão 11.1
+
+* Utilizando os programas exemplos/canny.cpp e exemplos/pontilhismo.cpp como referência, implemente um programa cannypoints.cpp. A idéia é usar as bordas produzidas pelo algoritmo de Canny para melhorar a qualidade da imagem pontilhista gerada. A forma como a informação de borda será usada é livre. Entretanto, são apresentadas algumas sugestões de técnicas que poderiam ser utilizadas:
+
+** Desenhar pontos grandes na imagem pontilhista básica;
+
+** Usar a posição dos pixels de borda encontrados pelo algoritmo de Canny para desenhar pontos nos respectivos locais na imagem gerada.
+
+** Experimente ir aumentando os limiares do algoritmo de Canny e, para cada novo par de limiares, desenhar círculos cada vez menores nas posições encontradas. A Figura Pontilhismo aplicado à imagem Lena foi desenvolvida usando essa técnica.
+
+* Escolha uma imagem de seu gosto e aplique a técnica que você desenvolveu.
+
+* Descreva no seu relatório detalhes do procedimento usado para criar sua técnica pontilhista.
+
+==== Resolução
+
+[source,c++]
+----
+include::cannypoints_2.cpp[]
+----
+
+image::tiltshift.jpg[title = Imagem Original]
+image::cannypoints1.png[title = Threshold = 1]
+image::cannypoints2.png[title = Threshold = 3]
+image::cannypoints3.png[title = Threshold = 5]
+image::cannypoints4.png[title = Threshold = 9]
+image::cannypoints5.png[title = Threshold = 12]
+image::cannypoints6.png[title = Threshold = 14]
+image::cannypoints7.png[title = Threshold = 18]

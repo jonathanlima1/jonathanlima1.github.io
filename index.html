@@ -424,7 +424,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <div id="toctitle">Processamento Digital de Imagens</div>
 <ul class="sectlevel1">
 <li><a href="#_alunos">Alunos</a></li>
-<li><a href="#_exercícios">Exercícios</a>
+<li><a href="#_exercícios_i">Exercícios I</a>
 <ul class="sectlevel2">
 <li><a href="#_questão_3_1">Questão 3.1</a>
 <ul class="sectlevel3">
@@ -468,6 +468,20 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 </li>
 </ul>
 </li>
+<li><a href="#_exercícios_ii">Exercícios II</a>
+<ul class="sectlevel2">
+<li><a href="#_questão_8_2">Questão 8.2</a>
+<ul class="sectlevel3">
+<li><a href="#_resolução_9">Resolução</a></li>
+</ul>
+</li>
+<li><a href="#_questão_11_1">Questão 11.1</a>
+<ul class="sectlevel3">
+<li><a href="#_resolução_10">Resolução</a></li>
+</ul>
+</li>
+</ul>
+</li>
 </ul>
 </div>
 </div>
@@ -484,7 +498,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 </div>
 </div>
 <div class="sect1">
-<h2 id="_exercícios"><a class="link" href="#_exercícios">Exercícios</a></h2>
+<h2 id="_exercícios_i"><a class="link" href="#_exercícios_i">Exercícios I</a></h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>Referente à Primeira Unidade da disciplina de Processamento Digital de Imagens.</p>
@@ -1468,10 +1482,482 @@ Mat imagemOriginal, imagemBorrada, imagem32, imagemB32, tilt, tilt32;
 </div>
 </div>
 </div>
+<div class="sect1">
+<h2 id="_exercícios_ii"><a class="link" href="#_exercícios_ii">Exercícios II</a></h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Referente à Segunda Unidade da disciplina de Processamento Digital de Imagens.</p>
+</div>
+<div class="sect2">
+<h3 id="_questão_8_2"><a class="link" href="#_questão_8_2">Questão 8.2</a></h3>
+<div class="paragraph">
+<p>Utilizando o programa dft.cpp como referência, implemente o filtro homomórfico para melhorar imagens com iluminação irregular. Crie uma cena mal iluminada e ajuste os parâmetros do filtro homomórfico para corrigir a iluminação da melhor forma possível. Assuma que a imagem fornecida é em tons de cinza.</p>
+</div>
+<div class="sect3">
+<h4 id="_resolução_9"><a class="link" href="#_resolução_9">Resolução</a></h4>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="c++"><span class="preprocessor">#include</span> <span class="include">&lt;iostream&gt;</span>
+<span class="preprocessor">#include</span> <span class="include">&lt;opencv2/opencv.hpp&gt;</span>
+<span class="preprocessor">#include</span> <span class="include">&lt;cmath&gt;</span>
+
+<span class="directive">using</span> <span class="keyword">namespace</span> cv;
+<span class="directive">using</span> <span class="keyword">namespace</span> std;
+
+<span class="predefined-type">int</span> c_slider = <span class="integer">0</span>;
+<span class="predefined-type">int</span> c_slider_max = <span class="integer">100</span>;
+
+<span class="predefined-type">int</span> gamaL_slider = <span class="integer">0</span>;
+<span class="predefined-type">int</span> gamaL_slider_max = <span class="integer">100</span>;
+
+<span class="predefined-type">int</span> gamaH_slider = <span class="integer">0</span>;
+<span class="predefined-type">int</span> gamaH_slider_max = <span class="integer">100</span>;
+
+<span class="predefined-type">int</span> d0_slider = <span class="integer">0</span>;
+<span class="predefined-type">int</span> d0_slider_max = <span class="integer">100</span>;
+
+Mat image1, image2, blended;
+Mat imageTop;
+
+<span class="predefined-type">char</span> TrackbarName[<span class="integer">50</span>];
+
+Mat padded, filter, mag, complexImage;
+Mat image, imagegray, tmp, imageO, imagegrayO;
+Mat_&lt;<span class="predefined-type">float</span>&gt; realInput, zeros;
+vector&lt;Mat&gt; planos;
+<span class="predefined-type">int</span> dft_M, dft_N;
+
+<span class="directive">void</span> deslocaDFT(Mat&amp; image ){
+    Mat tmp, A, B, C, D;
+
+    <span class="comment">// se a imagem tiver tamanho impar, recorta a regiao para</span>
+    <span class="comment">// evitar cópias de tamanho desigual</span>
+    image = image(Rect(<span class="integer">0</span>, <span class="integer">0</span>, image.cols &amp; -<span class="integer">2</span>, image.rows &amp; -<span class="integer">2</span>));
+    <span class="predefined-type">int</span> cx = image.cols/<span class="integer">2</span>;
+    <span class="predefined-type">int</span> cy = image.rows/<span class="integer">2</span>;
+
+    <span class="comment">// reorganiza os quadrantes da transformada</span>
+    <span class="comment">// A B   -&gt;  D C</span>
+    <span class="comment">// C D       B A</span>
+    A = image(Rect(<span class="integer">0</span>, <span class="integer">0</span>, cx, cy));
+    B = image(Rect(cx, <span class="integer">0</span>, cx, cy));
+    C = image(Rect(<span class="integer">0</span>, cy, cx, cy));
+    D = image(Rect(cx, cy, cx, cy));
+
+    <span class="comment">// A &lt;-&gt; D</span>
+    A.copyTo(tmp);  D.copyTo(A);  tmp.copyTo(D);
+
+    <span class="comment">// C &lt;-&gt; B</span>
+    C.copyTo(tmp);  B.copyTo(C);  tmp.copyTo(B);
+}
+
+<span class="directive">void</span> on_trackbar(<span class="predefined-type">int</span>, <span class="directive">void</span>*){
+
+    imageO.copyTo(image);
+    image.convertTo(image, CV_32F);
+    log(image, image);
+
+    dft_M = getOptimalDFTSize(image.rows);
+    dft_N = getOptimalDFTSize(image.cols);
+
+    <span class="comment">// realiza o padding da imagem</span>
+    copyMakeBorder(image, padded, <span class="integer">0</span>,
+                   dft_M - image.rows, <span class="integer">0</span>,
+                   dft_N - image.cols,
+                   BORDER_CONSTANT, Scalar::all(<span class="integer">0</span>));
+
+    <span class="comment">// parte imaginaria da matriz complexa (preenchida com zeros)</span>
+    zeros = Mat_&lt;<span class="predefined-type">float</span>&gt;::zeros(padded.size());
+
+    <span class="comment">// prepara a matriz complexa para ser preenchida</span>
+    complexImage = Mat(padded.size(), CV_32FC2, Scalar(<span class="integer">0</span>));
+
+    <span class="comment">// a função de transferência (filtro frequencial) deve ter o</span>
+    <span class="comment">// mesmo tamanho e tipo da matriz complexa</span>
+    filter = complexImage.clone();
+
+    <span class="comment">// cria uma matriz temporária para criar as componentes real</span>
+    <span class="comment">// e imaginaria do filtro ideal</span>
+    tmp = Mat(dft_M, dft_N, CV_32F);
+
+    cvtColor(imageO, imagegrayO, CV_BGR2GRAY);
+    imshow(<span class="string"><span class="delimiter">&quot;</span><span class="content">original</span><span class="delimiter">&quot;</span></span>, imagegrayO);
+    cvtColor(image, imagegray, CV_BGR2GRAY);
+
+    <span class="comment">// realiza o padding da imagem</span>
+    copyMakeBorder(imagegray, padded, <span class="integer">0</span>,
+                   dft_M - image.rows, <span class="integer">0</span>,
+                   dft_N - image.cols,
+                   BORDER_CONSTANT, Scalar::all(<span class="integer">0</span>));
+    <span class="comment">// limpa o array de matrizes que vao compor a</span>
+    <span class="comment">// imagem complexa</span>
+    planos.clear();
+    <span class="comment">// cria a compoente real</span>
+    realInput = Mat_&lt;<span class="predefined-type">float</span>&gt;(padded);
+    <span class="comment">// insere as duas componentes no array de matrizes</span>
+    planos.push_back(realInput);
+    planos.push_back(zeros);
+
+    <span class="comment">// combina o array de matrizes em uma unica</span>
+    <span class="comment">// componente complexa</span>
+    merge(planos, complexImage);
+
+    <span class="comment">// calcula o dft</span>
+    dft(complexImage, complexImage);
+
+    <span class="comment">// realiza a troca de quadrantes</span>
+    deslocaDFT(complexImage);
+
+    <span class="predefined-type">float</span> d0, gamaH, gamaL;
+    gamaL = gamaL_slider/<span class="integer">1</span><span class="float">0</span><span class="float">.0</span>;
+    gamaH = gamaH_slider/<span class="integer">1</span><span class="float">0</span><span class="float">.0</span>;
+    d0 = d0_slider/<span class="integer">1</span><span class="float">0</span><span class="float">.0</span>;
+
+    <span class="comment">// prepara o filtro passa-baixas ideal</span>
+    <span class="keyword">for</span>(<span class="predefined-type">int</span> i=<span class="integer">0</span>; i&lt;dft_M; i++){
+
+        <span class="keyword">for</span>(<span class="predefined-type">int</span> j=<span class="integer">0</span>; j&lt;dft_N; j++){
+            tmp.at&lt;<span class="predefined-type">float</span>&gt; (i,j) = (gamaH - gamaL) *
+                    (<span class="float">1</span><span class="float">.0</span> - exp(-<span class="float">1</span><span class="float">.0</span> * (<span class="predefined-type">float</span>)c_slider * ((pow(((<span class="predefined-type">float</span>) i - dft_M/<span class="float">2</span><span class="float">.0</span>),<span class="integer">2</span>)+pow(((<span class="predefined-type">float</span>) j - dft_N/<span class="float">2</span><span class="float">.0</span>),<span class="integer">2</span>))/(d0*d0)) ))
+                    + gamaL;
+        }
+    }
+
+    <span class="comment">// cria a matriz com as componentes do filtro e junta</span>
+    <span class="comment">// ambas em uma matriz multicanal complexa</span>
+    Mat comps[]= {tmp, tmp};
+    merge(comps, <span class="integer">2</span>, filter);
+
+    <span class="comment">// aplica o filtro frequencial</span>
+    mulSpectrums(complexImage,filter,complexImage,<span class="integer">0</span>);
+
+    <span class="comment">// troca novamente os quadrantes</span>
+    deslocaDFT(complexImage);
+
+    <span class="comment">// calcula a DFT inversa</span>
+    idft(complexImage, complexImage);
+
+    <span class="comment">// limpa o array de planos</span>
+    planos.clear();
+
+    <span class="comment">// separa as partes real e imaginaria da</span>
+    <span class="comment">// imagem filtrada</span>
+    split(complexImage, planos);
+
+    <span class="comment">// normaliza a parte real para exibicao</span>
+    normalize(planos[<span class="integer">0</span>], planos[<span class="integer">0</span>], <span class="integer">0</span>, <span class="integer">1</span>, CV_MINMAX);
+    planos[<span class="integer">0</span>].convertTo(planos[<span class="integer">0</span>], CV_32F);
+    imshow(<span class="string"><span class="delimiter">&quot;</span><span class="content">addweighted</span><span class="delimiter">&quot;</span></span>, planos[<span class="integer">0</span>]);
+}
+
+<span class="predefined-type">int</span> main(<span class="predefined-type">int</span> argvc, <span class="predefined-type">char</span>** argv){
+
+    imageO = imread(<span class="string"><span class="delimiter">&quot;</span><span class="content">biel.png</span><span class="delimiter">&quot;</span></span>);
+
+    namedWindow(<span class="string"><span class="delimiter">&quot;</span><span class="content">addweighted</span><span class="delimiter">&quot;</span></span>, <span class="integer">1</span>);
+    sprintf( TrackbarName, <span class="string"><span class="delimiter">&quot;</span><span class="content">C x %d</span><span class="delimiter">&quot;</span></span>, c_slider_max );
+    createTrackbar( TrackbarName, <span class="string"><span class="delimiter">&quot;</span><span class="content">addweighted</span><span class="delimiter">&quot;</span></span>,
+                    &amp;c_slider,
+                    c_slider_max,
+                    on_trackbar);
+    on_trackbar(c_slider, <span class="integer">0</span> );
+
+    sprintf( TrackbarName, <span class="string"><span class="delimiter">&quot;</span><span class="content">GAMA L x %d</span><span class="delimiter">&quot;</span></span>, gamaL_slider_max );
+    createTrackbar( TrackbarName, <span class="string"><span class="delimiter">&quot;</span><span class="content">addweighted</span><span class="delimiter">&quot;</span></span>,
+                    &amp;gamaL_slider,
+                    gamaL_slider_max,
+                    on_trackbar);
+    on_trackbar(gamaL_slider, <span class="integer">0</span> );
+
+    sprintf( TrackbarName, <span class="string"><span class="delimiter">&quot;</span><span class="content">GAMA H x %d</span><span class="delimiter">&quot;</span></span>, gamaH_slider_max );
+    createTrackbar( TrackbarName, <span class="string"><span class="delimiter">&quot;</span><span class="content">addweighted</span><span class="delimiter">&quot;</span></span>,
+                    &amp;gamaH_slider,
+                    gamaH_slider_max,
+                    on_trackbar);
+    on_trackbar(gamaH_slider, <span class="integer">0</span> );
+
+    sprintf( TrackbarName, <span class="string"><span class="delimiter">&quot;</span><span class="content">D0 x %d</span><span class="delimiter">&quot;</span></span>, d0_slider_max );
+    createTrackbar( TrackbarName, <span class="string"><span class="delimiter">&quot;</span><span class="content">addweighted</span><span class="delimiter">&quot;</span></span>,
+                    &amp;d0_slider,
+                    d0_slider_max,
+                    on_trackbar);
+    on_trackbar(d0_slider, <span class="integer">0</span> );
+
+
+    waitKey(<span class="integer">0</span>);
+    <span class="keyword">return</span> <span class="integer">0</span>;
+}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>O código acima consiste em realizar o processo de filtragem. Na primeira parte, tratamos a imagem, onde se é aplicada um logaritmo natural antes de levar para o domínio da frequência.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="c++">        image.convertTo(image, CV_32F);
+        log(image, image);</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Então se realiza a transformada de Fourier:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="c++">        dft(complexImage, complexImage);
+        deslocaDFT(complexImage);</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Então é aplicado o filtro na imagem:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="c++">    <span class="predefined-type">float</span> d0, gamaH, gamaL;
+    gamaL = gamaL_slider/<span class="integer">1</span><span class="float">0</span><span class="float">.0</span>;
+    gamaH = gamaH_slider/<span class="integer">1</span><span class="float">0</span><span class="float">.0</span>;
+    d0 = d0_slider/<span class="integer">1</span><span class="float">0</span><span class="float">.0</span>;
+
+    <span class="comment">// prepara o filtro passa-baixas ideal</span>
+    <span class="keyword">for</span>(<span class="predefined-type">int</span> i=<span class="integer">0</span>; i&lt;dft_M; i++){
+
+        <span class="keyword">for</span>(<span class="predefined-type">int</span> j=<span class="integer">0</span>; j&lt;dft_N; j++){
+            tmp.at&lt;<span class="predefined-type">float</span>&gt; (i,j) = (gamaH - gamaL) *
+                    (<span class="float">1</span><span class="float">.0</span> - exp(-<span class="float">1</span><span class="float">.0</span> * (<span class="predefined-type">float</span>)c_slider * ((pow(((<span class="predefined-type">float</span>) i - dft_M/<span class="float">2</span><span class="float">.0</span>),<span class="integer">2</span>)+pow(((<span class="predefined-type">float</span>) j - dft_N/<span class="float">2</span><span class="float">.0</span>),<span class="integer">2</span>))/(d0*d0)) ))
+                    + gamaL;
+        }
+    }
+
+    <span class="comment">// cria a matriz com as componentes do filtro e junta</span>
+    <span class="comment">// ambas em uma matriz multicanal complexa</span>
+    Mat comps[]= {tmp, tmp};
+    merge(comps, <span class="integer">2</span>, filter);
+
+    <span class="comment">// aplica o filtro frequencial</span>
+    mulSpectrums(complexImage,filter,complexImage,<span class="integer">0</span>);</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Então é aplicada a inversa de Fourier e a exponencial na imagem no domínio do espaço:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="c++">    deslocaDFT(complexImage);
+    idft(complexImage, complexImage);
+
+    planos.clear();
+
+    <span class="comment">// separa as partes real e imaginaria da imagem filtrada</span>
+    split(complexImage, planos);
+
+    <span class="comment">// normaliza a parte real para exibicao</span>
+    normalize(planos[<span class="integer">0</span>], planos[<span class="integer">0</span>], <span class="integer">0</span>, <span class="integer">1</span>, CV_MINMAX);
+    planos[<span class="integer">0</span>].convertTo(planos[<span class="integer">0</span>], CV_32F);</code></pre>
+</div>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="homomorfico_original.png" alt="homomorfico original">
+</div>
+<div class="title">Figure 6. Imagem Original</div>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="homomorfico1.png" alt="homomorfico1">
+</div>
+<div class="title">Figure 7. Imagem Filtrada</div>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="homomorfico2.png" alt="homomorfico2">
+</div>
+<div class="title">Figure 8. Imagem Filtrada 2</div>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="homomorfico3.png" alt="homomorfico3">
+</div>
+<div class="title">Figure 9. Imagem Filtrada 3</div>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_questão_11_1"><a class="link" href="#_questão_11_1">Questão 11.1</a></h3>
+<div class="ulist">
+<ul>
+<li>
+<p>Utilizando os programas exemplos/canny.cpp e exemplos/pontilhismo.cpp como referência, implemente um programa cannypoints.cpp. A idéia é usar as bordas produzidas pelo algoritmo de Canny para melhorar a qualidade da imagem pontilhista gerada. A forma como a informação de borda será usada é livre. Entretanto, são apresentadas algumas sugestões de técnicas que poderiam ser utilizadas:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>Desenhar pontos grandes na imagem pontilhista básica;</p>
+</li>
+<li>
+<p>Usar a posição dos pixels de borda encontrados pelo algoritmo de Canny para desenhar pontos nos respectivos locais na imagem gerada.</p>
+</li>
+<li>
+<p>Experimente ir aumentando os limiares do algoritmo de Canny e, para cada novo par de limiares, desenhar círculos cada vez menores nas posições encontradas. A Figura Pontilhismo aplicado à imagem Lena foi desenvolvida usando essa técnica.</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>Escolha uma imagem de seu gosto e aplique a técnica que você desenvolveu.</p>
+</li>
+<li>
+<p>Descreva no seu relatório detalhes do procedimento usado para criar sua técnica pontilhista.</p>
+</li>
+</ul>
+</div>
+<div class="sect3">
+<h4 id="_resolução_10"><a class="link" href="#_resolução_10">Resolução</a></h4>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="c++"><span class="preprocessor">#include</span> <span class="include">&lt;iostream&gt;</span>
+<span class="preprocessor">#include</span> <span class="include">&lt;opencv2/opencv.hpp&gt;</span>
+<span class="preprocessor">#include</span> <span class="include">&lt;fstream&gt;</span>
+<span class="preprocessor">#include</span> <span class="include">&lt;iomanip&gt;</span>
+<span class="preprocessor">#include</span> <span class="include">&lt;vector&gt;</span>
+<span class="preprocessor">#include</span> <span class="include">&lt;algorithm&gt;</span>
+<span class="preprocessor">#include</span> <span class="include">&lt;numeric&gt;</span>
+<span class="preprocessor">#include</span> <span class="include">&lt;ctime&gt;</span>
+<span class="preprocessor">#include</span> <span class="include">&lt;cstdlib&gt;</span>
+
+<span class="directive">using</span> <span class="keyword">namespace</span> std;
+<span class="directive">using</span> <span class="keyword">namespace</span> cv;
+
+<span class="preprocessor">#define</span> JITTER <span class="integer">1</span>
+<span class="preprocessor">#define</span> RAIO <span class="integer">1</span>
+
+<span class="predefined-type">int</span> top_slider = <span class="integer">1</span>;
+<span class="predefined-type">int</span> top_slider_max = <span class="integer">20</span>;
+
+<span class="predefined-type">char</span> TrackbarName[<span class="integer">50</span>];
+
+Mat image, border, points, out;
+<span class="predefined-type">int</span> width, height;
+<span class="predefined-type">int</span> x, y, raio;
+Vec3b val;
+
+
+<span class="directive">void</span> on_trackbar_canny(<span class="predefined-type">int</span>, <span class="directive">void</span>*){
+  Canny(image, border, <span class="integer">10</span>*top_slider, <span class="integer">30</span>*top_slider);
+  <span class="comment">//imshow(&quot;canny&quot;, border);</span>
+
+  points = Mat(height, width, CV_8UC3, Scalar(<span class="integer">255</span>,<span class="integer">255</span>,<span class="integer">255</span>));
+  <span class="comment">//points = Scalar(255,255,255);</span>
+
+  <span class="keyword">for</span>(<span class="predefined-type">int</span> l=<span class="integer">0</span>; l&lt;height ;l++){
+      <span class="keyword">for</span>(<span class="predefined-type">int</span> c=<span class="integer">0</span>; c&lt;width ;c++){
+        <span class="keyword">if</span>(border.at&lt;uchar&gt;(l,c) == <span class="integer">255</span>){
+         <span class="comment">//raio = 1+rand()%3;</span>
+          <span class="keyword">if</span>(top_slider &lt; <span class="integer">5</span>) raio = <span class="integer">1</span>;
+          <span class="keyword">else</span> <span class="keyword">if</span>(top_slider &gt;= <span class="integer">5</span> &amp;&amp; top_slider &lt; <span class="integer">10</span>) raio = <span class="integer">2</span>;
+          <span class="keyword">else</span> <span class="keyword">if</span>(top_slider &gt;= <span class="integer">10</span> &amp;&amp; top_slider &lt; <span class="integer">15</span>) raio = <span class="integer">3</span>;
+          <span class="keyword">else</span> raio = <span class="integer">4</span>;
+          x = l+rand()%(<span class="integer">2</span>*JITTER)-JITTER+<span class="integer">1</span>;
+          y = c+rand()%(<span class="integer">2</span>*JITTER)-JITTER+<span class="integer">1</span>;
+          val[<span class="integer">0</span>] = (<span class="predefined-type">int</span>)(image.at&lt;Vec3b&gt;(x,y)[<span class="integer">0</span>]);
+          val[<span class="integer">1</span>] = (<span class="predefined-type">int</span>)(image.at&lt;Vec3b&gt;(x,y)[<span class="integer">1</span>]);
+          val[<span class="integer">2</span>] = (<span class="predefined-type">int</span>)(image.at&lt;Vec3b&gt;(x,y)[<span class="integer">2</span>]);
+          circle(points,
+                 cv::Point(y,x),
+                 raio,
+                 cv::Scalar(val[<span class="integer">0</span>],val[<span class="integer">1</span>],val[<span class="integer">2</span>]),
+                 -<span class="integer">1</span>);
+        }
+      }
+  }
+    imshow(<span class="string"><span class="delimiter">&quot;</span><span class="content">canny</span><span class="delimiter">&quot;</span></span>, points);
+    <span class="comment">//waitKey();</span>
+}
+
+<span class="predefined-type">int</span> main(<span class="predefined-type">int</span> argc, <span class="predefined-type">char</span>** argv){
+
+  image= imread(argv[<span class="integer">1</span>],CV_LOAD_IMAGE_COLOR);
+
+  srand(time(<span class="integer">0</span>));
+
+  width=image.size().width;
+  height=image.size().height;
+
+  <span class="keyword">if</span>(!image.data){
+  cout &lt;&lt; <span class="string"><span class="delimiter">&quot;</span><span class="content">nao abriu</span><span class="delimiter">&quot;</span></span> &lt;&lt; argv[<span class="integer">1</span>] &lt;&lt; endl;
+    cout &lt;&lt; argv[<span class="integer">0</span>] &lt;&lt; <span class="string"><span class="delimiter">&quot;</span><span class="content"> imagem.jpg</span><span class="delimiter">&quot;</span></span>;
+    exit(<span class="integer">0</span>);
+  }
+
+  points = Mat(height, width, CV_8U, Scalar(<span class="integer">255</span>,<span class="integer">255</span>,<span class="integer">255</span>));
+
+  sprintf( TrackbarName, <span class="string"><span class="delimiter">&quot;</span><span class="content">Threshold inferior x %d</span><span class="delimiter">&quot;</span></span>, top_slider_max);
+  namedWindow(<span class="string"><span class="delimiter">&quot;</span><span class="content">canny</span><span class="delimiter">&quot;</span></span>,<span class="integer">1</span>);
+  createTrackbar( TrackbarName, <span class="string"><span class="delimiter">&quot;</span><span class="content">canny</span><span class="delimiter">&quot;</span></span>,
+                &amp;top_slider,
+                top_slider_max,
+                on_trackbar_canny );
+
+  on_trackbar_canny(top_slider, <span class="integer">0</span> );
+
+  waitKey(<span class="integer">0</span>);
+  <span class="keyword">return</span> <span class="integer">0</span>;
+}</code></pre>
+</div>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="tiltshift.jpg" alt="tiltshift">
+</div>
+<div class="title">Figure 10. Imagem Original</div>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="cannypoints1.png" alt="cannypoints1">
+</div>
+<div class="title">Figure 11. Threshold = 1</div>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="cannypoints2.png" alt="cannypoints2">
+</div>
+<div class="title">Figure 12. Threshold = 3</div>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="cannypoints3.png" alt="cannypoints3">
+</div>
+<div class="title">Figure 13. Threshold = 5</div>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="cannypoints4.png" alt="cannypoints4">
+</div>
+<div class="title">Figure 14. Threshold = 9</div>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="cannypoints5.png" alt="cannypoints5">
+</div>
+<div class="title">Figure 15. Threshold = 12</div>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="cannypoints6.png" alt="cannypoints6">
+</div>
+<div class="title">Figure 16. Threshold = 14</div>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="cannypoints7.png" alt="cannypoints7">
+</div>
+<div class="title">Figure 17. Threshold = 18</div>
+</div>
+</div>
+</div>
+</div>
+</div>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2016-03-21 19:24:31 BRT
+Last updated 2016-05-05 19:28:03 BRT
 </div>
 </div>
 </body>
