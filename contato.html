@@ -132,8 +132,17 @@
         <h2>Contato</h2>
 
         <div class="author-text">
-          <a href="/">Link</a>
-          <small class="hidden-xs">Aluno, 2016.2</small><br>
+          <formmethod="post" name="contact_form" action="contact-form-handler.php">
+            Nome:<br>
+            <input type="text" name="name"><br><br>
+            Email:<br>
+            <input type="text" name="email"><br><br>
+
+            Dúvida/Critica/Elogio:<br>
+            <textarea name="message" style="resize:none" rows="10" cols="30"></textarea><br><br>
+
+          <input style="none" type="submit" value="Enviar">
+          </form>
         </div>
 
       </div>
@@ -174,6 +183,13 @@
         $("#my-menu").trigger("open.mm");
       });
    });
+</script>
+
+<script language="JavaScript">
+  var frmvalidator  = new Validator("contactform");
+  frmvalidator.addValidation("name","req","Por favor insira seu nome");
+  frmvalidator.addValidation("email","req","Por favor insira seu email";
+  frmvalidator.addValidation("email","email", "Por favor entre um email válido");
 </script>
 
 <script type="text/javascript">
